@@ -68,10 +68,11 @@ def assign_clusters(features, cluster_num):
     kmeans = MiniBatchKMeans(n_clusters=cluster_num, random_state=0, batch_size=1024)
     return kmeans.fit_predict(features)
 
-def get_vectors_for_clustering(df, price_cell_range, contiguous_cells_num, weights_distribution):
+def get_vectors_for_clustering(df, contiguous_cells_num, weights_distribution):
     product_dummies = pd.get_dummies(df[c.PRODUCT]).astype(int)
     supplier_dummies = pd.get_dummies(df[c.SUPPLIER]).astype(int)
     license_dummies = pd.get_dummies(df[c.LICENSE]).astype(int)
+    price_cell_range = 50 # TODO autocompute using dimension of other vectors
     price_dummies = get_price_dummies(df[c.PRICE], price_cell_range, contiguous_cells_num, weights_distribution)
     # TODO introduce PCA to avoid one vector from dominating the distance metric
     return np.column_stack([
@@ -93,27 +94,27 @@ def split_clusters_by_variable(df, cluster_col, variable):
 
 
 
+def categorize_data(data, contiguous_cells_num, weights_distribution, cluster_num):
+    sku_data = group_data_by_sku(data)
+    sku_data[c.PRODUCT] = get_product(sku_data)
 
-data_path = '/home/jmarcosh/Downloads/Fan Army (Abril).xlsx'
-supplier_exclude = ['PROVEEDOR DE PLAYERA']
-platform_include = ['Amazon', 'Mercado Libre']
-c = ColNames()
+    stacked_dummies = get_vectors_for_clustering(sku_data, contiguous_cells_num, weights_distribution)
 
-data = load_sales_data(data_path, platform_include, supplier_exclude)
-sku_data = group_data_by_sku(data)
-sku_data[c.PRODUCT] = get_product(sku_data)
+    sku_data[c.CLUSTER] = assign_clusters(stacked_dummies, cluster_num)
 
+    sku_data[c.CLUSTER] = split_clusters_by_variable(sku_data, cluster_col=c.CLUSTER, variable=[c.LICENSE, c.PRODUCT])
 
-stacked_dummies = get_vectors_for_clustering(sku_data, price_cell_range, contiguous_cells_num, weights_distribution)
-
-sku_data[c.CLUSTER] = assign_clusters(stacked_dummies, cluster_num)
-
-sku_data[c.CLUSTER] = split_clusters_by_variable(sku_data, cluster_col=c.CLUSTER, variable=[c.LICENSE, c.PRODUCT])
-
-data = data.merge(sku_data[[c.SKU, c.PRODUCT, c.CLUSTER]], how='left', on=c.SKU)
+    return data.merge(sku_data[[c.SKU, c.PRODUCT, c.CLUSTER]], how='left', on=c.SKU)
 
 
-price_cell_range = 50
-contiguous_cells_num = 2
-weights_distribution = [1, 0.5, 0.25]
-cluster_num = 200
+if __name__ == '__main__':
+
+    data_path = '/home/jmarcosh/Downloads/Fan Army (Abril).xlsx'
+    supplier_exclude = ['PROVEEDOR DE PLAYERA']
+    platform_include = ['Amazon', 'Mercado Libre']
+    c = ColNames()
+    data = load_sales_data(data_path, platform_include, supplier_exclude)
+    contiguous_cells_num = 2
+    weights_distribution = [1, 0.5, 0.25]
+    cluster_num = 200
+    data = categorize_data(data, contiguous_cells_num, weights_distribution, cluster_num)
