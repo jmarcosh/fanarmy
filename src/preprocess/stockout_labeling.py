@@ -1,12 +1,10 @@
-from src.preprocess_data.utils.sales_data_functions import load_sales_data
-from src.preprocess_data.utils.varnames import ColNames
+from src.preprocess.load_sales_data import load_sales_data
+from src.utils.varnames import ColNames as c
 
-import pandas as pd
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import numpy as np
 from sklearn.metrics import mean_squared_error
-
 
 
 
@@ -19,6 +17,7 @@ def compute_rule_based_stockout_indicator(df, surge_value, dev_0, x, dev_x):
     a = - (dev_x - dev_0) / np.log(1 + x)
     slump = (df['residuals'] < a * np.log(1 + df[c.UNITS]) - dev_0).astype(int)
     df['stockout'] = slump & ((surge_t_minus_1 == 1) | (surge_t_plus_1 == 1) | is_first).astype(int)
+    print('Rows in df', len(df))
     print('Initial stockout', df['stockout'].sum())
 
     date_max = df[c.DATE].max()
@@ -43,31 +42,13 @@ def compute_rule_based_stockout_indicator(df, surge_value, dev_0, x, dev_x):
     )
     # Set other 1s to 0
     stockout = df['stockout'].where(keep_mask, 0)
-    print(count + 1, stockout.sum())
+    print('Final stockout', stockout.sum())
     return stockout
-
-
-def filter_out_skus_with_non_significant_sales(df, sales_threshold):
-    data_sku_platform = df.groupby([
-        c.SKU_PLATFORM], observed=True)[[c.UNITS]].sum().reset_index()
-    sorted_sales = data_sku_platform.sort_values(by=[c.UNITS], ascending=False)
-    sorted_sales_array = sorted_sales[c.UNITS].values
-    # % of SKUs
-    sku_pct = np.arange(1, len(sorted_sales_array) + 1) / len(sorted_sales_array)
-    # Cumulative sales as % of total
-    cum_sales_pct = np.cumsum(sorted_sales_array) / sorted_sales_array.sum()
-    # Find index of first value greater than the threshold
-    index = np.argmax(sorted_sales_array == sales_threshold)
-    selected_skus = sorted_sales[c.SKU_PLATFORM].iloc[:index].tolist()
-    dfs = df[df[c.SKU_PLATFORM].isin(selected_skus)].reset_index(drop=True)
-    print(f'Percentage of SKUs with sales above {sales_threshold}: {sku_pct[index]:.2%}')
-    print(f'Percentage of rows kept: {len(dfs) / len(df)}')
-    print(f'Percentage of sales in SKUs above threshold: {cum_sales_pct[index]:.2%}')
-    return dfs
 
 
 
 def fit_model_and_predict(df):
+    df[c.SKU_PLATFORM] = df[c.SKU_PLATFORM].astype('category')
     poisson_model = smf.glm(
         formula=f'{c.UNITS} ~ {c.PRICE} + {c.PLATFORM_MONTHLY_SALES} + C({c.SKU_PLATFORM})',
         data=df,
@@ -87,19 +68,14 @@ def add_features_for_stockout_fixed_effects_model(df):
                               rename(columns={c.UNITS: c.PLATFORM_MONTHLY_SALES}).reset_index())
     df = df.merge(platform_monthly_sales, on=['date', 'Plataforma'], how='left')
     # Include sku_platform_fixed_effects
-    df[c.SKU_PLATFORM] = df[c.SKU].astype(str) + "_" + df[c.PLATFORM].astype(str)
-    df[c.SKU_PLATFORM] = df[c.SKU_PLATFORM].astype('category')
     return df
 
 
 
-def stockout_labeling(df, minimum_sales_per_sku, dev_sale_zero, second_point, dev_second_point, surge_threshold):
+def stockout_labeling(df, dev_sale_zero, second_point, dev_second_point, surge_threshold):
 
     #Load data
     df = add_features_for_stockout_fixed_effects_model(df)
-
-    # Filter out non significant sales
-    df = filter_out_skus_with_non_significant_sales(df, minimum_sales_per_sku)
 
     # Fit and predict the model
     df['pred'] = fit_model_and_predict(df)
@@ -124,9 +100,8 @@ if __name__ == '__main__':
     second_point = 10
     dev_second_point = 2
     surge_threshold = 1.25
-    minimum_sales_per_sku = 10
-    c = ColNames()
+    # c = ColNames()
     data = load_sales_data(data_path, platform_include, supplier_exclude)
-    data = stockout_labeling(data, minimum_sales_per_sku, dev_sale_zero, second_point,
+    data = stockout_labeling(data, dev_sale_zero, second_point,
                       dev_second_point, surge_threshold)
 

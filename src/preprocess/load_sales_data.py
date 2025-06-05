@@ -1,7 +1,9 @@
 import itertools
+
+import numpy as np
 import pandas as pd
 
-from src.preprocess_data.utils.varnames import MONTH_NAME_TO_NUMBER, ColNames
+from src.utils.varnames import MONTH_NAME_TO_NUMBER, ColNames as c
 
 
 def expand_df_with_all_combinations(df, freq, grouping_cols, date_col='sale_date', platform_col=''):
@@ -52,7 +54,6 @@ def expand_df_with_all_combinations(df, freq, grouping_cols, date_col='sale_date
 
 
 def load_sales_data(data_path, platform_include, supplier_exclude):
-    c = ColNames()
     df = pd.read_excel(data_path, sheet_name='Data')
     df = df[(~df[c.SUPPLIER].isin(supplier_exclude)) & (df[c.PLATFORM].isin(platform_include))].reset_index(
         drop=True)
@@ -60,12 +61,39 @@ def load_sales_data(data_path, platform_include, supplier_exclude):
         c.SKU, c.DESCRIPTION, c.SUPPLIER, c.LICENSE, c.PLATFORM, c.MONTH, c.YEAR
     ])[[c.UNITS, c.SALES_MXN, c.COST]].sum().reset_index()
     # Add ate in yyyy/mm/dd format
+    for col in df.select_dtypes(include=['string', 'object']).columns:
+        df[col] = df[col].astype(str).str.strip()
     df[c.MONTH_NUM] = df[c.MONTH].str.lower().map(MONTH_NAME_TO_NUMBER)
     df[c.DATE] = pd.to_datetime(dict(year=df[c.YEAR], month=df[c.MONTH_NUM], day=1))
     # Expand data with months we have no sales observations
     df = expand_df_with_all_combinations(df, 'MS', [c.SKU, c.DESCRIPTION, c.SUPPLIER, c.LICENSE, c.PLATFORM],
                                             date_col=c.DATE, platform_col=c.PLATFORM)
+    if df[[c.SKU, c.DESCRIPTION, c.SUPPLIER,
+                           c.LICENSE, c.PLATFORM]].isnull().any().any():
+        raise ValueError("Missing values detected in required columns.")
     df = df.groupby([c.SKU, c.DESCRIPTION, c.SUPPLIER,
                            c.LICENSE, c.PLATFORM]).filter(lambda g: g[c.UNITS].notna().any())
+    df[c.MONTH_NUM] = df[c.DATE].dt.month
+    df[c.YEAR] = df[c.DATE].dt.year
     df[c.UNITS] = df[c.UNITS].fillna(0)
+    df[c.SKU_PLATFORM] = df[c.SKU].astype(str) + "_" + df[c.PLATFORM].astype(str)
     return df
+
+
+def filter_out_skus_with_non_significant_sales(df, sales_threshold):
+    data_sku_platform = df.groupby([
+        c.SKU_PLATFORM], observed=True)[[c.UNITS]].sum().reset_index()
+    sorted_sales = data_sku_platform.sort_values(by=[c.UNITS], ascending=False)
+    sorted_sales_array = sorted_sales[c.UNITS].values
+    # % of SKUs
+    sku_pct = np.arange(1, len(sorted_sales_array) + 1) / len(sorted_sales_array)
+    # Cumulative sales as % of total
+    cum_sales_pct = np.cumsum(sorted_sales_array) / sorted_sales_array.sum()
+    # Find index of first value greater than the threshold
+    index = np.argmax(sorted_sales_array == sales_threshold)
+    selected_skus = sorted_sales[c.SKU_PLATFORM].iloc[:index].tolist()
+    dfs = df[df[c.SKU_PLATFORM].isin(selected_skus)].reset_index(drop=True)
+    print(f'Percentage of SKUs with sales above {sales_threshold}: {sku_pct[index]:.2%}')
+    print(f'Percentage of rows kept: {len(dfs) / len(df):.2%}')
+    print(f'Percentage of sales in SKUs above threshold: {cum_sales_pct[index]:.2%}')
+    return dfs
