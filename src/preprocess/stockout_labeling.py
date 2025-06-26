@@ -1,3 +1,4 @@
+
 from src.preprocess.load_sales_data import load_sales_data
 from src.utils.varnames import ColNames as c
 
@@ -60,9 +61,7 @@ def fit_model_and_predict(df):
     return y_pred
 
 
-def add_features_for_stockout_fixed_effects_model(df):
-    df[c.PRICE] = df[c.SALES_MXN] / df[c.UNITS]
-    df[c.PRICE] = df[c.PRICE].fillna(df.groupby(c.SKU)[c.PRICE].transform('mean'))
+def add_platform_monthly_sales_for_stockout_fixed_effects_model(df):
     # Add platform monthly sales as another feature
     platform_monthly_sales = (df.groupby([c.DATE, c.PLATFORM], observed=True)[[c.UNITS]].sum().
                               rename(columns={c.UNITS: c.PLATFORM_MONTHLY_SALES}).reset_index())
@@ -75,7 +74,7 @@ def add_features_for_stockout_fixed_effects_model(df):
 def stockout_labeling(df, dev_sale_zero, second_point, dev_second_point, surge_threshold):
 
     #Load data
-    df = add_features_for_stockout_fixed_effects_model(df)
+    df = add_platform_monthly_sales_for_stockout_fixed_effects_model(df)
 
     # Fit and predict the model
     df['pred'] = fit_model_and_predict(df)
@@ -87,6 +86,17 @@ def stockout_labeling(df, dev_sale_zero, second_point, dev_second_point, surge_t
     df['stockout'] = compute_rule_based_stockout_indicator(df, surge_threshold, dev_sale_zero, second_point, dev_second_point)
 
 
+    return df
+
+
+def remove_stockout_rows(df):
+    if 'stockout' not in df.columns:
+        df['stockout'] = 0
+    df['stockout_group'] = (
+        df.groupby(c.SKU_PLATFORM, observed=True)['stockout']
+        .transform(lambda x: (x != x.shift()).cumsum())
+    )
+    df = df[df['stockout'] == 0].reset_index(drop=True)
     return df
 
 

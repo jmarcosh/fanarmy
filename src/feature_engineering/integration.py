@@ -12,11 +12,11 @@ def merge_sales_and_imdb_data(dataframes: list[pd.DataFrame], merge_key: str, im
     return df
 
 def get_months_from_release(df: pd.DataFrame, important_licenses) -> pd.DataFrame:
-    df["date"] = pd.to_datetime(df["date"], format="%Y-%m-%d")
+    df[c.DATE] = pd.to_datetime(df[c.DATE], format="%Y-%m-%d")
     df["release_date"] = pd.to_datetime(df["release_date"], format="%m/%d/%y")
     df['months_from_release'] = (
-            (df['date'].dt.year - df['release_date'].dt.year) * 12 +
-            (df['date'].dt.month - df['release_date'].dt.month)
+            (df[c.DATE].dt.year - df['release_date'].dt.year) * 12 +
+            (df[c.DATE].dt.month - df['release_date'].dt.month)
     )
     dummies = pd.get_dummies(df[c.LICENSE])[important_licenses].astype(int).multiply(
         df["months_from_release"], axis=0)

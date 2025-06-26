@@ -1,3 +1,4 @@
+import sys
 import unicodedata
 from typing import Any
 
@@ -56,8 +57,12 @@ def l2_normalize(matrix):
     return normalized_matrix
 
 def group_data_by_sku(df):
-    grouped = df.groupby([c.SKU, c.DESCRIPTION, c.SUPPLIER, c.LICENSE]).agg({c.SALES_MXN: 'sum', c.COST: 'mean',
+    grouped = df.groupby([c.SKU, c.DESCRIPTION, c.SUPPLIER, c.LICENSE]).agg({c.SALES_MXN: 'sum',
                                                                                 c.UNITS: 'sum'}).reset_index()
+    non_unique_skus = grouped[grouped[c.SKU].duplicated(keep=False)]
+    if len(non_unique_skus) > 0:
+        print(non_unique_skus)
+        sys.exit('Check multiple values per SKU')
     grouped[c.PRICE] = grouped[c.SALES_MXN] / grouped[c.UNITS]
     return grouped
 

@@ -13,7 +13,7 @@ IMDB_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/imdb.csv"
 # ==== Sales filtering ====
 SUPPLIER_EXCLUDE = ['PROVEEDOR DE PLAYERA']
 PLATFORM_INCLUDE = ['Amazon', 'Mercado Libre']
-MINIMUM_SALES_PER_SKU = 10
+MINIMUM_SALES_PER_SKU = 15
 
 # === Clustering and pricing parameters ===
 PRICE_DUMMY_CONTIGUOUS_CELLS_NUM = 2
@@ -25,6 +25,7 @@ DEV_SALE_ZERO = 1
 SECOND_POINT = 10
 DEV_SECOND_POINT = 2
 SURGE_THRESHOLD = 1.25
+FILTER_OUT_STOCKOUT = True
 
 # ==== Time features ====
 PERIODS_IN_YEAR = 12

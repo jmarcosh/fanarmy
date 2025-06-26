@@ -5,20 +5,8 @@ from src.utils.varnames import ColNames as c
 
 
 def engineer_sales_features(df: pd.DataFrame, periods_in_year:int, max_lag: int, valid_lags_threshold: float) -> pd.DataFrame:
-    df = remove_stockout_rows(df)
     df = engineer_time_features(df, periods_in_year)
     df = get_sales_lags(df, max_lag, valid_lags_threshold)
-    return df
-
-
-def remove_stockout_rows(df: pd.DataFrame) -> pd.DataFrame:
-    if 'stockout' not in df.columns:
-        df['stockout'] = 0
-    df['stockout_group'] = (
-        df.groupby(c.SKU_PLATFORM, observed=True)['stockout']
-        .transform(lambda x: (x != x.shift()).cumsum())
-    )
-    df = df[df['stockout'] == 0].reset_index(drop=True)
     return df
 
 def engineer_time_features(df: pd.DataFrame, periods_in_year: int) -> pd.DataFrame:
@@ -45,6 +33,7 @@ def count_valid_lags(df, sku_cols, date_col, target_col, max_lag=12):
 
 
 def get_sales_lags(df: pd.DataFrame, max_lag, valid_lags_threshold: float) -> pd.DataFrame: # , correlation_threshold: float
+    #TODO calculate max_lag by substracting min_date from max_date
     lag_valid_counts = count_valid_lags(df, sku_cols=[c.SKU_PLATFORM, 'stockout_group'], date_col=c.DATE,
                                         target_col=c.UNITS, max_lag=max_lag)
     threshold_cnt = valid_lags_threshold * len(df)
