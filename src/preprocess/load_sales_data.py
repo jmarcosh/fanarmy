@@ -67,19 +67,24 @@ def load_sales_data(data_path, platform_include, supplier_exclude):
     # Add ate in yyyy/mm/dd format
     for col in df.select_dtypes(include=['string', 'object']).columns:
         df[col] = df[col].astype(str).str.strip()
-    df[c.MONTH_NUM] = df[c.MONTH].str.lower().map(MONTH_NAME_TO_NUMBER)
-    df[c.DATE] = pd.to_datetime(dict(year=df[c.YEAR], month=df[c.MONTH_NUM], day=1))
+    df = create_date_from_year_and_month(df)
     # Expand data with months we have no sales observations
     df = expand_df_with_all_combinations(df, 'MS', [c.SKU, c.DESCRIPTION, c.SUPPLIER, c.LICENSE, c.PLATFORM],
                                             date_col=c.DATE, platform_col=c.PLATFORM)
     df[c.UNITS] = df[c.UNITS].fillna(0)
     df[c.SKU_PLATFORM] = df[c.SKU].astype(str) + "_" + df[c.PLATFORM].astype(str)
-    df = add_price_and_cost(df)
-    df = add_year_and_month(df)  
+    df[c.COST] = df[c.COST].fillna(
+        weighted_mean_column(df, [c.SKU], c.COST)
+    )
     df = check_for_missing_values(df, [c.SKU, c.DESCRIPTION, c.SUPPLIER,
-           c.LICENSE, c.PLATFORM, c.PRICE])
+           c.LICENSE, c.PLATFORM])
     return df
 
+
+def create_date_from_year_and_month(df):
+    df[c.MONTH_NUM] = df[c.MONTH].str.lower().map(MONTH_NAME_TO_NUMBER)
+    df[c.DATE] = pd.to_datetime(dict(year=df[c.YEAR], month=df[c.MONTH_NUM], day=1))
+    return df.drop([c.YEAR, c.MONTH, c.MONTH_NUM], axis=1)
 
 
 def filter_out_skus_with_non_significant_sales(df, sales_threshold):
@@ -106,13 +111,6 @@ def add_year_and_month(df):
     df[c.YEAR] = df[c.DATE].dt.year
     return df
 
-def add_price_and_cost(df: pd.DataFrame) -> pd.DataFrame:
-    df[c.PRICE] = df[c.SALES_MXN] / df[c.UNITS]
-    df[c.PRICE] = df[c.PRICE].fillna(weighted_mean_column(df, [c.SKU_PLATFORM], c.PRICE))
-    df[c.COST] = df[c.COST].fillna(
-        weighted_mean_column(df, [c.SKU], c.COST)
-    )
-    return df
 
 def check_for_missing_values(df: pd.DataFrame, required_columns) -> pd.DataFrame:
     if df[required_columns].isnull().any().any():

@@ -107,6 +107,7 @@ def categorize_data(df, contiguous_cells_num, weights_distribution, cluster_num)
     sku_df = group_data_by_sku(df)
     sku_df[c.PRODUCT] = get_product(sku_df)
 
+
     stacked_dummies = get_vectors_for_clustering(sku_df, contiguous_cells_num, weights_distribution)
 
     sku_df[c.CLUSTER] = assign_clusters(stacked_dummies, cluster_num)

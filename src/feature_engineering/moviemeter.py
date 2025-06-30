@@ -5,7 +5,7 @@ from src.utils.varnames import ColNames as c
 
 def engineer_moviemeter_features(df, moviemeter_trend_windows) -> pd.DataFrame:
     df['moviemeter_average'] = df.iloc[:, 1:].mean(axis=1)
-    for window in [3, 6]:
+    for window in moviemeter_trend_windows:
         df[f'moviemeter_trend_{window}'] = get_moviemeter_trends(df, window)
     return df[['license', 'moviemeter_average', 'moviemeter_trend_3', 'moviemeter_trend_6']].rename(
         {'license': c.LICENSE}, axis=1)

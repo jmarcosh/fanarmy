@@ -8,7 +8,12 @@ def engineer_imdb_features(df, min_produced_movies) -> pd.DataFrame:
     df['imdb_rating'] = df['imdb_rating'].str.replace('/10', '').astype(float)
     df['next_release_dummy'] = df['next release'].notna().astype(int)
     df = create_production_company_dummies(df, min_produced_movies)
-    return df
+
+    features = [c.LICENSE, 'release_date', 'budget', 'imdb_rating', 'news_articles', 'opening_weekend', 'run_time',
+                'universal_pictures', 'warner_bros', 'next_release_dummy',
+                'title_tatus', 'title_type', 'production_company'  # categorical
+                ]
+    return df[features]
 
 
 def create_production_company_dummies(df: pd.DataFrame, min_produced_movies: int) -> pd.DataFrame:

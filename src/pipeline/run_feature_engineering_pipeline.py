@@ -17,14 +17,6 @@ def run_feature_engineering_pipeline():
     processed_sales = pd.read_csv(PROCESSED_DATA_PATH / 'processed_sales.csv')
     sales = engineer_sales_features(processed_sales, PERIODS_IN_YEAR, MAX_LAG, VALID_LAGS_THRESHOLD)
 
-    # fix in source file
-    sales.loc[(sales['Categoría'] == 'DISNEY') & (
-        sales['Descripción'].str.contains('stich', case=False, na=False)), 'Categoría'] = "STITCH"
-    sales.loc[(sales['Categoría'] == 'DISNEY') & (
-        sales['Descripción'].str.contains('stitch', case=False, na=False)), 'Categoría'] = "STITCH"
-    sales.loc[(sales['Categoría'] == 'DISNEY') & (sales['Descripción'].str.contains('mandalorian', case=False, na=False)), 'Categoría'] = "THE MANDALORIAN"
-    sales.loc[(sales['Categoría'] == 'DISNEY') & (sales['Descripción'].str.contains('star wars', case=False, na=False)), 'Categoría'] = "STAR WARS"
-
     moviemeter_raw = pd.read_csv(MOVIEMETER_DATA_PATH)
     moviemeter = engineer_moviemeter_features(moviemeter_raw, MOVIEMETER_TREND_WINDOWS)
 
