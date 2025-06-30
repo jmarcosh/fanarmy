@@ -1,5 +1,6 @@
 
 from src.preprocess.load_sales_data import load_sales_data
+from src.utils.utils import weighted_mean_column
 from src.utils.varnames import ColNames as c
 
 import statsmodels.api as sm
@@ -61,6 +62,12 @@ def fit_model_and_predict(df):
     return y_pred
 
 
+def add_price_for_stockout_fixed_effects_model(df):
+    df[c.PRICE] = df[c.SALES_MXN] / df[c.UNITS]
+    df[c.PRICE] = df[c.PRICE].fillna(weighted_mean_column(df, [c.SKU_PLATFORM], c.PRICE))
+    return df
+
+
 def add_platform_monthly_sales_for_stockout_fixed_effects_model(df):
     # Add platform monthly sales as another feature
     platform_monthly_sales = (df.groupby([c.DATE, c.PLATFORM], observed=True)[[c.UNITS]].sum().
@@ -71,9 +78,10 @@ def add_platform_monthly_sales_for_stockout_fixed_effects_model(df):
 
 
 
-def stockout_labeling(df, dev_sale_zero, second_point, dev_second_point, surge_threshold):
+def stockout_labeling(df, dev_sale_zero, second_point, dev_second_point, surge_threshold, filter_out_stockout):
 
     #Load data
+    df = add_price_for_stockout_fixed_effects_model(df)
     df = add_platform_monthly_sales_for_stockout_fixed_effects_model(df)
 
     # Fit and predict the model
@@ -84,18 +92,19 @@ def stockout_labeling(df, dev_sale_zero, second_point, dev_second_point, surge_t
 
     # Convert predictions to stockout indicator
     df['stockout'] = compute_rule_based_stockout_indicator(df, surge_threshold, dev_sale_zero, second_point, dev_second_point)
-
-
+    if filter_out_stockout:
+        df = remove_stockout_rows(df)
+    df = df.drop([c.PRICE, c.PLATFORM_MONTHLY_SALES, 'pred', 'residuals', 'stockout'], axis=1)
     return df
 
 
 def remove_stockout_rows(df):
     if 'stockout' not in df.columns:
         df['stockout'] = 0
-    df['stockout_group'] = (
-        df.groupby(c.SKU_PLATFORM, observed=True)['stockout']
-        .transform(lambda x: (x != x.shift()).cumsum())
-    )
+    # df['stockout_group'] = (
+    #     df.groupby(c.SKU_PLATFORM, observed=True)['stockout']
+    #     .transform(lambda x: (x != x.shift()).cumsum())
+    # )
     df = df[df['stockout'] == 0].reset_index(drop=True)
     return df
 
