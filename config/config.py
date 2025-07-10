@@ -9,6 +9,8 @@ SALES_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/Fan Army (Abril).xls
 PROCESSED_DATA_PATH = Path("/home/jmarcosh/Projects/fanarmy/data/processed")
 MOVIEMETER_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/moviemeter_monthly.csv"
 IMDB_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/imdb.csv"
+MODELS_PATH = Path("/home/jmarcosh/Projects/fanarmy/models")
+
 
 # ==== Sales filtering ====
 SUPPLIER_EXCLUDE = ['PROVEEDOR DE PLAYERA']
@@ -54,3 +56,22 @@ MERGE_KEY = C.LICENSE
 
 # ==== Encoding ====
 IMDB_ENCODING = 'latin1'
+
+# ==== Model ====
+PARAMS= {
+  "depth": 8,
+  "learning_rate": 0.05,
+  "l2_leaf_reg": 3,
+  "iterations": 40
+}
+FEATURES_EXCLUDE = [
+  C.DATE, C.DESCRIPTION, C.UNITS, C.SALES_MXN, C.YEAR, C.SKU_PLATFORM, "ts_index", "cont_sales_id",
+           "aggregation_level"
+]
+CATEGORICAL_FEATURES= [
+  C.SKU, C.SKU_PLATFORM, C.SUPPLIER, C.LICENSE, C.PLATFORM, C.PRODUCT, C.CLUSTER,
+                  "aggregation_level", "ts_index", "title_tatus", "title_type", "production_company"
+                       ]
+TARGET = C.UNITS
+TRAIN_CUTOFF = "2025-01-01"
+MODEL_DIR = "catboost_20250702"
