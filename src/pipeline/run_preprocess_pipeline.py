@@ -8,7 +8,7 @@ from config.config import (
 from src.preprocess.aggregate_data import aggregate_data
 from src.preprocess.categorize_data import categorize_data
 from src.preprocess.load_sales_data import load_sales_data, filter_out_skus_with_non_significant_sales
-from src.preprocess.stockout_labeling import stockout_labeling, remove_stockout_rows
+from src.preprocess.stockout_labeling import stockout_labeling
 
 
 def run_preprocess_pipeline():

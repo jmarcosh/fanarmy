@@ -22,7 +22,8 @@ class ColNames:
     PRODUCT: str = 'product'
     CLUSTER: int = 'cluster'
     STOCKOUT: bool = 'stockout'
-
+    UNIQUE_ID: str = 'ts_index'
+    NODE: str = 'aggregation_level'
 
 
 MONTH_NAME_TO_NUMBER = {

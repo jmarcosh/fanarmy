@@ -7,6 +7,8 @@ from src.utils.varnames import ColNames as C
 # ==== Data paths ====
 SALES_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/Fan Army (Abril).xlsx"
 PROCESSED_DATA_PATH = Path("/home/jmarcosh/Projects/fanarmy/data/processed")
+OUTPUT_DATA_PATH = Path("/home/jmarcosh/Projects/fanarmy/data/output")
+
 MOVIEMETER_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/moviemeter_monthly.csv"
 IMDB_DATA_PATH = "/home/jmarcosh/Projects/fanarmy/data/raw/imdb.csv"
 MODELS_PATH = Path("/home/jmarcosh/Projects/fanarmy/models")
@@ -58,6 +60,8 @@ MERGE_KEY = C.LICENSE
 IMDB_ENCODING = 'latin1'
 
 # ==== Model ====
+
+
 PARAMS= {
   "depth": 8,
   "learning_rate": 0.05,
@@ -74,4 +78,13 @@ CATEGORICAL_FEATURES= [
                        ]
 TARGET = C.UNITS
 TRAIN_CUTOFF = "2025-01-01"
-MODEL_DIR = "catboost_20250702"
+
+TRAIN = False
+MODEL_DIR = "catboost_20250702" # if TRAIN == True. Choose new model name to avoid overlapping
+
+RECONCILERS = [
+    {
+        "class_path": "hierarchicalforecast.methods.MinTraceSparse",
+        "params": {"method": "wls_struct", "nonnegative": "True"}
+    },
+]
